@@ -1,8 +1,8 @@
 import { decodeJwt } from "jose";
-import { UserSettings } from "src/core/game/UserSettings";
 import { z } from "zod";
 import { TokenPayload, TokenPayloadSchema } from "../core/ApiSchemas";
 import { base64urlToUuid } from "../core/Base64";
+import { UserSettings } from "../core/game/UserSettings";
 import { getApiBase, getAudience } from "./Api";
 import { generateCryptoRandomUUID } from "./Utils";
 
@@ -266,9 +266,12 @@ export async function confirmEmailLink(
       return null;
     }
 
-    const json = await response.json();
-    const { email } = json;
-    return { email };
+    const json = (await response.json()) as { email?: unknown };
+    if (typeof json.email !== "string" || json.email.trim() === "") {
+      console.error("Email link confirmation returned invalid email");
+      return null;
+    }
+    return { email: json.email };
   } catch (error) {
     console.error("Error confirming email link:", error);
     return null;

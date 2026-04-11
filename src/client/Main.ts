@@ -311,12 +311,13 @@ class Client {
       throw new Error("Missing homepage-promos");
 
     document.addEventListener("join-lobby", this.handleJoinLobby.bind(this));
-    document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
+    document.addEventListener("leave-lobby", (event: Event) => {
+      void this.handleLeaveLobby(event as CustomEvent);
+    });
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
-    document.addEventListener(
-      "update-game-config",
-      this.handleUpdateGameConfig.bind(this),
-    );
+    document.addEventListener("update-game-config", (event: Event) => {
+      this.handleUpdateGameConfig(event as CustomEvent);
+    });
     document.addEventListener(
       "open-matchmaking",
       this.handleOpenMatchmaking.bind(this),
@@ -494,8 +495,8 @@ class Client {
 
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${DARK_MODE_KEY}`,
-      (e: CustomEvent<string>) => {
-        const isDark = e.detail === "true";
+      (event: Event) => {
+        const isDark = (event as CustomEvent<string>).detail === "true";
         applyDarkMode(isDark);
       },
     );
