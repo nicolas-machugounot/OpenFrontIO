@@ -46,6 +46,8 @@ Use this agent for:
 3. Pull request process:
 
 - Keep PR focused on one feature or one bug fix.
+- Please keep PRs small (<200 lines).
+- Some features may need to be split into multiple PRs.
 - Include screenshots for UI changes.
 - Describe testing performed.
 - Be responsive to review feedback.
