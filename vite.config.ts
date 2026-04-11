@@ -81,6 +81,7 @@ export default defineConfig(({ mode }) => {
 
     resolve: {
       alias: {
+        src: path.resolve(__dirname, "src"),
         "protobufjs/minimal": path.resolve(
           __dirname,
           "node_modules/protobufjs/minimal.js",
