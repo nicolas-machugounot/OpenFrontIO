@@ -1,4 +1,3 @@
-import { GameUpdateType } from "src/core/game/GameUpdates";
 import { vi, type Mocked } from "vitest";
 import { DefaultConfig } from "../../../src/core/configuration/DefaultConfig";
 import { TrainExecution } from "../../../src/core/execution/TrainExecution";
@@ -13,6 +12,7 @@ import {
   Unit,
   UnitType,
 } from "../../../src/core/game/Game";
+import { GameUpdateType } from "../../../src/core/game/GameUpdates";
 import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";
 import { UserSettings } from "../../../src/core/game/UserSettings";
 import { GameConfig } from "../../../src/core/Schemas";

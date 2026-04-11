@@ -1,5 +1,5 @@
-import { assetUrl } from "src/core/AssetUrls";
 import { UserMeResponse } from "../core/ApiSchemas";
+import { assetUrl } from "../core/AssetUrls";
 import {
   ColorPalette,
   Cosmetics,
