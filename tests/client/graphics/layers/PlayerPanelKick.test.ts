@@ -33,6 +33,24 @@ import { SendKickPlayerIntentEvent } from "../../../../src/client/Transport";
 import { PlayerType } from "../../../../src/core/game/Game";
 import { PlayerView } from "../../../../src/core/game/GameView";
 
+function collectTemplateText(node: unknown): string {
+  if (Array.isArray(node)) {
+    return node.map((entry) => collectTemplateText(entry)).join("");
+  }
+
+  if (!node || typeof node !== "object") {
+    return String(node ?? "");
+  }
+
+  const templateNode = node as { strings?: string[]; values?: unknown[] };
+  const strings = templateNode.strings ?? [];
+  const values = templateNode.values ?? [];
+
+  return strings
+    .map((part, index) => part + collectTemplateText(values[index]))
+    .join("");
+}
+
 describe("PlayerPanel - kick player moderation", () => {
   let panel: PlayerPanel;
   const originalConfirm = globalThis.confirm;
@@ -101,6 +119,64 @@ describe("PlayerPanel - kick player moderation", () => {
     expect((panel as any).kickedPlayerIDs.has("2")).toBe(true);
     expect((panel as any).moderationTarget).toBe(null);
     expect((panel as any).isVisible).toBe(false);
+  });
+});
+
+describe("PlayerPanel - spectator replay rendering", () => {
+  let panel: PlayerPanel;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    panel = new PlayerPanel();
+    (panel as any).requestUpdate = vi.fn();
+    (panel as any).isVisible = true;
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  test("renders alliances when myPlayer is unavailable", () => {
+    const alliedPlayer = {
+      displayName: () => "Allied Player",
+    } as unknown as PlayerView;
+
+    const owner = {
+      isPlayer: () => true,
+      isTraitor: () => false,
+      displayName: () => "Owner",
+      type: () => PlayerType.Human,
+      cosmetics: { flag: undefined },
+      gold: () => 1000,
+      troops: () => 250,
+      allies: () => [alliedPlayer],
+      data: { betrayals: 2 },
+      hasEmbargoAgainst: () => false,
+    } as unknown as PlayerView;
+
+    (panel as any).g = {
+      myPlayer: () => null,
+      owner: () => owner,
+      config: () => ({
+        disableAlliances: () => false,
+        isUnitDisabled: () => false,
+        maxTroops: () => 1000,
+        theme: () => ({
+          teamColor: () => ({ toHex: () => "#ffffff" }),
+        }),
+      }),
+      ticks: () => 100,
+    };
+    (panel as any).tile = {};
+
+    (panel as any).actions = null;
+
+    const rendered = panel.render();
+    const text = collectTemplateText(rendered);
+
+    expect(text).toContain("player_panel.alliances");
+    expect(text).toContain("Allied Player");
+    expect(actionButton).not.toHaveBeenCalled();
   });
 });
 

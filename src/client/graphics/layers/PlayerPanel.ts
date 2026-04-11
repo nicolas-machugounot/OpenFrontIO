@@ -108,6 +108,7 @@ export class PlayerPanel extends LitElement implements Layer {
 
   async tick() {
     if (this.isVisible && this.tile) {
+      let profileChanged = false;
       const owner = this.g.owner(this.tile);
       if (owner && owner.isPlayer()) {
         const pv = owner as PlayerView;
@@ -116,6 +117,7 @@ export class PlayerPanel extends LitElement implements Layer {
         if (this._profileForPlayerId !== Number(id)) {
           this.otherProfile = await pv.profile();
           this._profileForPlayerId = Number(id);
+          profileChanged = true;
         }
       }
 
@@ -140,6 +142,13 @@ export class PlayerPanel extends LitElement implements Layer {
           this.allianceExpiryText = null;
         }
         this.requestUpdate();
+      } else {
+        this.actions = null;
+        this.allianceExpirySeconds = null;
+        this.allianceExpiryText = null;
+        if (profileChanged) {
+          this.requestUpdate();
+        }
       }
     }
   }
@@ -441,8 +450,8 @@ export class PlayerPanel extends LitElement implements Layer {
     `;
   }
 
-  private renderModeration(my: PlayerView, other: PlayerView) {
-    if (!my.isLobbyCreator()) return html``;
+  private renderModeration(my: PlayerView | null, other: PlayerView) {
+    if (!my || !my.isLobbyCreator()) return html``;
     const moderationTitle = translateText("player_panel.moderation");
 
     return html`
@@ -460,10 +469,10 @@ export class PlayerPanel extends LitElement implements Layer {
     `;
   }
 
-  private renderRelationPillIfNation(other: PlayerView, my: PlayerView) {
+  private renderRelationPillIfNation(other: PlayerView, my: PlayerView | null) {
     if (other.type() !== PlayerType.Nation) return html``;
     if (other.isTraitor()) return html``;
-    if (my?.isAlliedWith && my.isAlliedWith(other)) return html``;
+    if (my?.isAlliedWith(other)) return html``;
     if (!this.otherProfile || !my) return html``;
 
     const relation =
@@ -478,7 +487,7 @@ export class PlayerPanel extends LitElement implements Layer {
     `;
   }
 
-  private renderIdentityRow(other: PlayerView, my: PlayerView) {
+  private renderIdentityRow(other: PlayerView, my: PlayerView | null) {
     const flagCode = other.cosmetics.flag;
     const country =
       typeof flagCode === "string"
@@ -584,7 +593,24 @@ export class PlayerPanel extends LitElement implements Layer {
     `;
   }
 
-  private renderStats(other: PlayerView, my: PlayerView) {
+  private renderStats(other: PlayerView, my: PlayerView | null) {
+    if (!my) {
+      return html`
+        <!-- Betrayals -->
+        <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
+          <div
+            class="flex items-center gap-2 text-[15px] font-medium text-zinc-100 leading-snug"
+          >
+            <span aria-hidden="true">⚠️</span>
+            <span>${translateText("player_panel.betrayals")}</span>
+          </div>
+          <div class="text-right text-[14px] font-semibold text-zinc-200">
+            ${other.data.betrayals ?? 0}
+          </div>
+        </div>
+      `;
+    }
+
     return html`
       <!-- Betrayals -->
       <div class="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2">
@@ -700,7 +726,9 @@ export class PlayerPanel extends LitElement implements Layer {
     `;
   }
 
-  private renderActions(my: PlayerView, other: PlayerView) {
+  private renderActions(my: PlayerView | null, other: PlayerView) {
+    if (!my) return html``;
+
     const myPlayer = this.g.myPlayer();
     const canDonateGold = this.actions?.interaction?.canDonateGold;
     const canDonateTroops = this.actions?.interaction?.canDonateTroops;
@@ -854,7 +882,6 @@ export class PlayerPanel extends LitElement implements Layer {
     if (!this.isVisible) return html``;
 
     const my = this.g.myPlayer();
-    if (!my) return html``;
     if (!this.tile) return html``;
 
     const owner = this.g.owner(this.tile);
@@ -864,8 +891,8 @@ export class PlayerPanel extends LitElement implements Layer {
       return html``;
     }
     const other = owner as PlayerView;
-    const myGoldNum = my.gold();
-    const myTroopsNum = Number(my.troops());
+    const myGoldNum = my?.gold() ?? 0;
+    const myTroopsNum = my ? Number(my.troops()) : 0;
 
     return html`
       <style>
@@ -935,7 +962,7 @@ export class PlayerPanel extends LitElement implements Layer {
                     <!-- Identity (flag, name, type, traitor, relation) -->
                     <div class="mb-1">${this.renderIdentityRow(other, my)}</div>
 
-                    ${this.sendTarget
+                    ${this.sendTarget && my
                       ? html`
                           <send-resource-modal
                             .open=${this.sendMode !== "none"}
@@ -956,7 +983,7 @@ export class PlayerPanel extends LitElement implements Layer {
                           ></send-resource-modal>
                         `
                       : ""}
-                    ${this.moderationTarget
+                    ${this.moderationTarget && my
                       ? html`
                           <player-moderation-modal
                             .open=${true}
