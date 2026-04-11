@@ -247,6 +247,34 @@ export async function sendLinkEmailStart(email: string): Promise<boolean> {
   }
 }
 
+export async function confirmEmailLink(
+  token: string,
+): Promise<{ email: string } | null> {
+  try {
+    const apiBase = getApiBase();
+    const response = await fetch(`${apiBase}/auth/link/email/confirm`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ token }),
+    });
+
+    if (response.status !== 200) {
+      console.error("Email link confirmation failed", response.status);
+      return null;
+    }
+
+    const json = await response.json();
+    const { email } = json;
+    return { email };
+  } catch (error) {
+    console.error("Error confirming email link:", error);
+    return null;
+  }
+}
+
 // WARNING: DO NOT EXPOSE THIS ID
 export async function getPlayToken(): Promise<string> {
   const result = await userAuth();

@@ -18,7 +18,7 @@ import {
 } from "../core/game/UserSettings";
 import "./AccountModal";
 import { getUserMe } from "./Api";
-import { userAuth } from "./Auth";
+import { confirmEmailLink, userAuth } from "./Auth";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
 import { getPlayerCosmeticsRefs } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
@@ -689,6 +689,21 @@ class Client {
       return;
     }
 
+    if (decodedHash.startsWith("#link-email")) {
+      const token = params.get("link-email-token");
+
+      if (!token) {
+        alertAndStrip(
+          `email link failed! Please try again later or contact support.`,
+        );
+        return;
+      }
+
+      strip();
+      void this.handleEmailLinkConfirmation(token);
+      return;
+    }
+
     const pathMatch = window.location.pathname.match(
       /^\/(?:w\d+\/)?game\/([^/]+)/,
     );
@@ -871,6 +886,28 @@ class Client {
 
     if (currentUrl !== targetUrl) {
       history.replaceState(null, "", targetUrl);
+    }
+  }
+
+  private async handleEmailLinkConfirmation(token: string): Promise<void> {
+    try {
+      const result = await confirmEmailLink(token);
+      if (result?.email) {
+        alert(
+          translateText("account_modal.email_linked_success", {
+            email: result.email,
+          }),
+        );
+        // Refresh user session to reflect the linked email
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        alert(translateText("account_modal.email_link_confirmation_failed"));
+      }
+    } catch (error) {
+      console.error("Email link confirmation error:", error);
+      alert(translateText("account_modal.email_link_confirmation_failed"));
     }
   }
 
