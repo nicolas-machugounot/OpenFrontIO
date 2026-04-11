@@ -209,6 +209,44 @@ export async function sendMagicLink(email: string): Promise<boolean> {
   }
 }
 
+export async function sendLinkEmailStart(email: string): Promise<boolean> {
+  try {
+    const authorization = await getAuthHeader();
+    if (!authorization) {
+      console.error("Cannot start email link without an authenticated session");
+      return false;
+    }
+
+    const apiBase = getApiBase();
+    const response = await fetch(`${apiBase}/auth/link/email/start`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authorization,
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        redirectDomain: window.location.origin,
+        email,
+      }),
+    });
+
+    if (response.ok) {
+      return true;
+    }
+
+    console.error(
+      "Failed to start email link flow:",
+      response.status,
+      response.statusText,
+    );
+    return false;
+  } catch (error) {
+    console.error("Error starting email link flow:", error);
+    return false;
+  }
+}
+
 // WARNING: DO NOT EXPOSE THIS ID
 export async function getPlayToken(): Promise<string> {
   const result = await userAuth();

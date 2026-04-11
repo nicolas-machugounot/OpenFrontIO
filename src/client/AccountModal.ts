@@ -8,7 +8,12 @@ import {
 import { assetUrl } from "../core/AssetUrls";
 import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { fetchPlayerById, getUserMe } from "./Api";
-import { discordLogin, logOut, sendMagicLink } from "./Auth";
+import {
+  discordLogin,
+  logOut,
+  sendLinkEmailStart,
+  sendMagicLink,
+} from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/GameList";
 import "./components/baseComponents/stats/PlayerStatsTable";
@@ -23,6 +28,7 @@ import { translateText } from "./Utils";
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
   @state() private email: string = "";
+  @state() private linkEmail: string = "";
   @state() private isLoadingUser: boolean = false;
 
   private userMeResponse: UserMeResponse | null = null;
@@ -209,6 +215,7 @@ export class AccountModal extends BaseModal {
     if (me?.discord) {
       return html`
         <div class="flex flex-col items-center gap-3 w-full">
+          ${!me.email ? this.renderEmailLinkSection() : ""}
           ${this.renderCurrency()} ${this.renderLogoutButton()}
         </div>
       `;
@@ -347,6 +354,37 @@ export class AccountModal extends BaseModal {
     `;
   }
 
+  private renderEmailLinkSection(): TemplateResult {
+    return html`
+      <div
+        class="w-full max-w-md rounded-xl border border-white/10 bg-white/5 p-4"
+      >
+        <div
+          class="mb-3 text-center text-xs font-bold uppercase tracking-wider text-white/60"
+        >
+          ${translateText("account_modal.get_magic_link")}
+        </div>
+        <div class="space-y-3">
+          <input
+            type="email"
+            name="link-email"
+            .value="${this.linkEmail}"
+            @input="${this.handleLinkEmailInput}"
+            class="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-medium text-white placeholder-white/20 transition-all hover:bg-white/10 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            placeholder="${translateText("account_modal.email_placeholder")}"
+            required
+          />
+          <button
+            @click="${this.handleStartEmailLink}"
+            class="w-full rounded-xl border border-white/5 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3 text-sm font-bold uppercase tracking-wider text-white shadow-lg transition-all hover:from-blue-500 hover:to-blue-600 hover:shadow-blue-900/40"
+          >
+            ${translateText("account_modal.get_magic_link")}
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
   private handleEmailInput(e: Event) {
     const target = e.target as HTMLInputElement;
     this.email = target.value;
@@ -368,6 +406,31 @@ export class AccountModal extends BaseModal {
     } else {
       alert(translateText("account_modal.failed_to_send_recovery_email"));
     }
+  }
+
+  private handleLinkEmailInput(e: Event) {
+    const target = e.target as HTMLInputElement;
+    this.linkEmail = target.value;
+  }
+
+  private async handleStartEmailLink() {
+    if (!this.linkEmail) {
+      alert(translateText("account_modal.enter_email_address"));
+      return;
+    }
+
+    const success = await sendLinkEmailStart(this.linkEmail);
+    if (success) {
+      alert(
+        translateText("account_modal.recovery_email_sent", {
+          email: this.linkEmail,
+        }),
+      );
+      this.linkEmail = "";
+      return;
+    }
+
+    alert(translateText("account_modal.failed_to_send_recovery_email"));
   }
 
   private handleDiscordLogin() {
