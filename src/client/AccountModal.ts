@@ -362,7 +362,7 @@ export class AccountModal extends BaseModal {
         <div
           class="mb-3 text-center text-xs font-bold uppercase tracking-wider text-white/60"
         >
-          ${translateText("account_modal.get_magic_link")}
+          ${translateText("account_modal.add_email_backup")}
         </div>
         <div class="space-y-3">
           <input
@@ -378,7 +378,7 @@ export class AccountModal extends BaseModal {
             @click="${this.handleStartEmailLink}"
             class="w-full rounded-xl border border-white/5 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3 text-sm font-bold uppercase tracking-wider text-white shadow-lg transition-all hover:from-blue-500 hover:to-blue-600 hover:shadow-blue-900/40"
           >
-            ${translateText("account_modal.get_magic_link")}
+            ${translateText("account_modal.send_backup_link")}
           </button>
         </div>
       </div>
@@ -414,16 +414,17 @@ export class AccountModal extends BaseModal {
   }
 
   private async handleStartEmailLink() {
-    if (!this.linkEmail) {
+    const email = this.linkEmail.trim();
+    if (!email) {
       alert(translateText("account_modal.enter_email_address"));
       return;
     }
 
-    const success = await sendLinkEmailStart(this.linkEmail);
+    const success = await sendLinkEmailStart(email);
     if (success) {
       alert(
         translateText("account_modal.recovery_email_sent", {
-          email: this.linkEmail,
+          email,
         }),
       );
       this.linkEmail = "";

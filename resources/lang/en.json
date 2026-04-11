@@ -228,6 +228,8 @@
     "or": "OR",
     "email_placeholder": "Enter your email address",
     "get_magic_link": "Get Magic Link",
+    "add_email_backup": "Add Email Backup",
+    "send_backup_link": "Send Backup Link",
     "linked_account": "Logged in as {account_name}",
     "fetching_account": "Fetching account information...",
     "recovery_email_sent": "Recovery email sent to {email}",

@@ -22,7 +22,7 @@ Permettre a un compte connecte via Discord d'ajouter un email de secours.
 ### Endpoints proposes
 
 - `POST /auth/link/email/start`: envoie un lien de verification a l'email.
-- `GET ou POST /auth/link/email/confirm?token=...`: confirme et lie l'email au compte authentifie.
+- `POST /auth/link/email/confirm`: confirme et lie l'email au compte authentifie (token dans le body JSON `{ token }`).
 
 ### Regles
 

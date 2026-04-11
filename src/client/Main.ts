@@ -694,7 +694,7 @@ class Client {
 
       if (!token) {
         alertAndStrip(
-          `email link failed! Please try again later or contact support.`,
+          translateText("account_modal.email_link_confirmation_failed"),
         );
         return;
       }
