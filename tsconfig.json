@@ -7,10 +7,9 @@
     "module": "ESNext",
     "rootDir": ".",
     "moduleResolution": "bundler",
-    "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
+    "ignoreDeprecations": "5.0",
     "paths": {
-      "resources/*": ["resources/*"]
+      "resources/*": ["./resources/*"]
     },
     // Emit
     "sourceMap": true,
