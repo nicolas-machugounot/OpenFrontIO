@@ -7,6 +7,28 @@ import { getApiBase, getAudience } from "./Api";
 import { generateCryptoRandomUUID } from "./Utils";
 
 export type UserAuth = { jwt: string; claims: TokenPayload } | false;
+export type SendMagicLinkFailureReason =
+  | "invalid_email"
+  | "unauthorized"
+  | "conflict"
+  | "rate_limited"
+  | "server_error"
+  | "network_error";
+export type SendMagicLinkResult =
+  | { ok: true }
+  | {
+      ok: false;
+      reason: SendMagicLinkFailureReason;
+      status?: number;
+      message?: string;
+    };
+
+const MagicLinkErrorResponseSchema = z
+  .object({
+    code: z.string().optional(),
+    message: z.string().optional(),
+  })
+  .passthrough();
 
 const PERSISTENT_ID_KEY = "player_persistent_id";
 
@@ -178,7 +200,35 @@ async function doRefreshJwt(): Promise<void> {
   }
 }
 
-export async function sendMagicLink(email: string): Promise<boolean> {
+function mapMagicLinkFailureReason(
+  status: number,
+  code?: string,
+): SendMagicLinkFailureReason {
+  if (status === 400) return "invalid_email";
+  if (status === 401) return "unauthorized";
+  if (status === 409) return "conflict";
+  if (status === 429) return "rate_limited";
+
+  const normalized = code?.toLowerCase();
+  if (normalized?.includes("invalid") || normalized?.includes("email")) {
+    return "invalid_email";
+  }
+  if (normalized?.includes("conflict") || normalized?.includes("already")) {
+    return "conflict";
+  }
+  if (normalized?.includes("rate") || normalized?.includes("limit")) {
+    return "rate_limited";
+  }
+  if (normalized?.includes("unauthor")) {
+    return "unauthorized";
+  }
+
+  return "server_error";
+}
+
+export async function sendMagicLinkDetailed(
+  email: string,
+): Promise<SendMagicLinkResult> {
   try {
     const apiBase = getApiBase();
     const response = await fetch(`${apiBase}/auth/magic-link`, {
@@ -194,19 +244,50 @@ export async function sendMagicLink(email: string): Promise<boolean> {
     });
 
     if (response.ok) {
-      return true;
+      return { ok: true };
     } else {
+      let code: string | undefined;
+      let message: string | undefined;
+      try {
+        const json = await response.json();
+        const parsed = MagicLinkErrorResponseSchema.safeParse(json);
+        if (parsed.success) {
+          code = parsed.data.code;
+          message = parsed.data.message;
+        }
+      } catch {
+        // ignore non-json error response bodies
+      }
+
+      const reason = mapMagicLinkFailureReason(response.status, code);
+
       console.error(
         "Failed to send recovery email:",
         response.status,
         response.statusText,
+        code,
+        message,
       );
-      return false;
+
+      return {
+        ok: false,
+        reason,
+        status: response.status,
+        message,
+      };
     }
   } catch (error) {
     console.error("Error sending recovery email:", error);
-    return false;
+    return {
+      ok: false,
+      reason: "network_error",
+    };
   }
+}
+
+export async function sendMagicLink(email: string): Promise<boolean> {
+  const result = await sendMagicLinkDetailed(email);
+  return result.ok;
 }
 
 // WARNING: DO NOT EXPOSE THIS ID

@@ -22,3 +22,38 @@ JWT verification happens once at WebSocket connection time. After that, the esta
 ## Development Mode
 
 When running the game in development, the API server is not active, so the game falls back to checking only persistentIDs for verification instead of JWTs. This is less secure, as stealing a persistentID means the attacker has indefinite control of the victim's account.
+
+## Account Linking Strategy (Discord + Email)
+
+### Problem
+
+Some players cannot access Discord from their network. If they use magic-link login without prior account linking, they can end up on a different identity, losing access to their existing stats/cosmetics progression.
+
+### Goal
+
+Allow players to authenticate with either Discord or email while preserving a single persistent account identity.
+
+### Scope split
+
+- **This repository (client + game server):**
+   - Expose clear UI paths for linking Discord and email in account settings.
+   - Consume existing auth endpoints and avoid breaking JWT/persistentID behavior.
+- **Identity API service (`jwtIssuer()` backend):**
+   - Enforce canonical account identity and perform safe merge/link operations.
+   - Prevent accidental account forks when a Discord-owned account later uses email.
+
+### Required backend contract
+
+At minimum, the identity API should support these guarantees:
+
+1. If a user is authenticated and adds another login method, both methods map to the same `persistentID`.
+2. Linking is idempotent and conflict-safe (clear error for already-linked to another identity).
+3. Magic-link completion returns/sets session for the canonical linked identity.
+4. `/users/@me` returns linked auth methods so client can render account state accurately.
+
+### Suggested rollout
+
+1. **UI discoverability (safe, immediate):** show Discord↔email linking actions in account modal.
+2. **API linking semantics:** backend ensures login methods resolve to same canonical identity.
+3. **Migration/backfill:** detect duplicate identities and provide explicit merge flow where needed.
+4. **Validation:** add tests for Discord-only, email-only, dual-linked, and conflict cases.

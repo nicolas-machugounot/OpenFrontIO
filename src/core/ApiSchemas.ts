@@ -55,6 +55,9 @@ export const DiscordUserSchema = z.object({
 });
 export type DiscordUser = z.infer<typeof DiscordUserSchema>;
 
+export const LinkedAuthProviderSchema = z.enum(["discord", "email"]);
+export type LinkedAuthProvider = z.infer<typeof LinkedAuthProviderSchema>;
+
 const SingleplayerMapAchievementSchema = z.object({
   mapName: z.string(),
   difficulty: z.enum(Difficulty),
@@ -64,6 +67,8 @@ export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
     email: z.string().optional(),
+    linkedProviders: z.array(LinkedAuthProviderSchema).optional(),
+    primaryProvider: LinkedAuthProviderSchema.optional(),
   }),
   player: z.object({
     publicId: z.string(),

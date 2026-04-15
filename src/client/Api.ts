@@ -4,6 +4,7 @@ import type { NewsItem } from "../core/ApiSchemas";
 import {
   ClanLeaderboardResponse,
   ClanLeaderboardResponseSchema,
+  LinkedAuthProvider,
   NewsItemSchema,
   PlayerProfile,
   PlayerProfileSchema,
@@ -191,15 +192,33 @@ export function getAudience() {
   return domainname;
 }
 
+export function getLinkedProviders(
+  userMeResponse: UserMeResponse | false,
+): LinkedAuthProvider[] {
+  if (userMeResponse === false) {
+    return [];
+  }
+
+  const providers = new Set<LinkedAuthProvider>(
+    userMeResponse.user.linkedProviders ?? [],
+  );
+
+  if (userMeResponse.user.discord !== undefined) {
+    providers.add("discord");
+  }
+
+  if (userMeResponse.user.email !== undefined) {
+    providers.add("email");
+  }
+
+  return [...providers];
+}
+
 // Check if the user's account is linked to a Discord or email account.
 export function hasLinkedAccount(
   userMeResponse: UserMeResponse | false,
 ): boolean {
-  return (
-    userMeResponse !== false &&
-    (userMeResponse.user?.discord !== undefined ||
-      userMeResponse.user?.email !== undefined)
-  );
+  return getLinkedProviders(userMeResponse).length > 0;
 }
 
 export async function fetchGameById(

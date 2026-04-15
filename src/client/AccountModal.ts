@@ -8,7 +8,7 @@ import {
 import { assetUrl } from "../core/AssetUrls";
 import { getRuntimeClientServerConfig } from "../core/configuration/ConfigLoader";
 import { fetchPlayerById, getUserMe } from "./Api";
-import { discordLogin, logOut, sendMagicLink } from "./Auth";
+import { discordLogin, logOut, sendMagicLinkDetailed } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/GameList";
 import "./components/baseComponents/stats/PlayerStatsTable";
@@ -24,6 +24,7 @@ import { translateText } from "./Utils";
 export class AccountModal extends BaseModal {
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
+  @state() private isSendingMagicLink: boolean = false;
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
@@ -187,9 +188,74 @@ export class AccountModal extends BaseModal {
               .onViewGame=${(id: string) => void this.viewGame(id)}
             ></game-list>
           </div>
+
+          ${this.renderLinkingOptions()}
         </div>
       </div>
     `;
+  }
+
+  private renderLinkingOptions(): TemplateResult {
+    const me = this.userMeResponse?.user;
+    if (!me) {
+      return html``;
+    }
+
+    if (me.discord && !me.email) {
+      return html`
+        <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+          <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <span class="text-blue-400">✉️</span>
+            ${translateText("account_modal.get_magic_link")}
+          </h3>
+          <div class="space-y-3">
+            <input
+              type="email"
+              id="email-linked"
+              name="email-linked"
+              .value="${this.email}"
+              @input="${this.handleEmailInput}"
+              class="w-full pl-4 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all font-medium hover:bg-white/10"
+              placeholder="${translateText("account_modal.email_placeholder")}" 
+              required
+            />
+            <button
+              @click="${this.handleSubmit}"
+              ?disabled=${this.isSendingMagicLink}
+              class="w-full px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-xl transition-all shadow-lg hover:shadow-blue-900/40 border border-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              ${translateText("account_modal.get_magic_link")}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    if (me.email && !me.discord) {
+      return html`
+        <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+          <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <span class="text-blue-400">🔗</span>
+            ${translateText("account_modal.link_discord")}
+          </h3>
+          <button
+            @click="${this.handleDiscordLogin}"
+            class="w-full px-6 py-4 text-white bg-[#5865F2] hover:bg-[#4752C4] border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5865F2] transition-colors duration-200 flex items-center justify-center gap-3 group relative overflow-hidden shadow-lg hover:shadow-[#5865F2]/20"
+          >
+            <img
+              src=${assetUrl("images/DiscordLogo.svg")}
+              alt="Discord"
+              class="w-6 h-6 relative z-10"
+            />
+            <span class="font-bold relative z-10 tracking-wide"
+              >${translateText("account_modal.link_discord")}</span
+            >
+          </button>
+        </div>
+      `;
+    }
+
+    return html``;
   }
 
   private renderCurrency(): TemplateResult {
@@ -358,15 +424,22 @@ export class AccountModal extends BaseModal {
       return;
     }
 
-    const success = await sendMagicLink(this.email);
-    if (success) {
-      alert(
-        translateText("account_modal.recovery_email_sent", {
-          email: this.email,
-        }),
-      );
-    } else {
-      alert(translateText("account_modal.failed_to_send_recovery_email"));
+    this.isSendingMagicLink = true;
+    try {
+      const result = await sendMagicLinkDetailed(this.email);
+      if (result.ok) {
+        alert(
+          translateText("account_modal.recovery_email_sent", {
+            email: this.email,
+          }),
+        );
+      } else if (result.reason === "invalid_email") {
+        alert(translateText("account_modal.enter_email_address"));
+      } else {
+        alert(translateText("account_modal.failed_to_send_recovery_email"));
+      }
+    } finally {
+      this.isSendingMagicLink = false;
     }
   }
 
